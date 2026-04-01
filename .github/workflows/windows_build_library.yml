@@ -1,0 +1,31 @@
+name: Build Xash3D Libraries
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Configure Waf
+        # Тут ми вказуємо, що нам потрібні саме 64-бітні бінарники
+        run: python waf configure --build-type=release --64bits
+
+      - name: Build
+        run: python waf build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xash3d-binaries
+          path: |
+            build/cl_dlls/*.dll
+            build/dlls/*.dll
