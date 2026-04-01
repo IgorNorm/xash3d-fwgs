@@ -1,8 +1,8 @@
-name: Build Xash3D Libraries
+name: Build Xash3D 64-bit
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-win64:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -11,21 +11,30 @@ jobs:
           submodules: 'recursive'
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
+
+      - name: Install SDL2 via vcpkg
+        # Нам потрібна x64 версія SDL2 для Windows
+        run: |
+          vcpkg install sdl2:x64-windows
+          vcpkg integrate install
 
       - name: Configure Waf
-        # Тут ми вказуємо, що нам потрібні саме 64-бітні бінарники
-        run: python waf configure --build-type=release --64bits
+        # Вказуємо шлях до vcpkg, щоб Waf знайшов SDL2
+        run: |
+          $env:CMAKE_TOOLCHAIN_FILE = "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          python waf configure --build-type=release --64bits
 
       - name: Build
         run: python waf build
 
-      - name: Upload Artifacts
+      - name: Upload DLLs
         uses: actions/upload-artifact@v4
         with:
-          name: xash3d-binaries
+          name: xash3d-64bit-dlls
+          # Збираємо всі скомпільовані ліби
           path: |
-            build/cl_dlls/*.dll
-            build/dlls/*.dll
+            build/**/*.dll
+            build/**/*.exe
