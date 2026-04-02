@@ -26,7 +26,6 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          # Ставимо все необхідне: Python, GCC/MinGW, SDL2 та pkg-config
           install: >-
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-python
@@ -36,8 +35,15 @@ jobs:
 
       - name: Configure Waf
         run: |
-          # Використовуємо саме python з MSYS2
+          # ПРИМУСОВО вказуємо використовувати GCC замість MSVC
+          export CC=gcc
+          export CXX=g++
           python3 waf configure --build-type=release --64bits
+
+      # ЦЕЙ РЯДОК ВИВЕДЕ ЛОГ, ЯКЩО CONFIGURE ВПАДЕ
+      - name: Show config.log on failure
+        if: failure()
+        run: cat build/config.log
 
       - name: Build
         run: |
@@ -47,7 +53,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xash3d-fwgs-win64
-          # Збираємо всі скомпільовані exe та dll
           path: |
             build/*.exe
             build/*.dll
