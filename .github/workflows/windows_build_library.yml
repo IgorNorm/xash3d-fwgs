@@ -1,40 +1,54 @@
-name: Build Xash3D 64-bit
-on: [push, pull_request]
+name: Build Xash3D FWGS 64-bit
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
 
 jobs:
-  build-win64:
+  build-windows:
     runs-on: windows-latest
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+          fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
         with:
-          python-version: '3.11'
-
-      - name: Install SDL2 via vcpkg
-        # Нам потрібна x64 версія SDL2 для Windows
-        run: |
-          vcpkg install sdl2:x64-windows
-          vcpkg integrate install
+          msystem: MINGW64
+          update: true
+          # Ставимо все необхідне: Python, GCC/MinGW, SDL2 та pkg-config
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-pkg-config
+            git
 
       - name: Configure Waf
-        # Вказуємо шлях до vcpkg, щоб Waf знайшов SDL2
         run: |
-          $env:CMAKE_TOOLCHAIN_FILE = "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-          python waf configure --build-type=release --64bits
+          # Використовуємо саме python з MSYS2
+          python3 waf configure --build-type=release --64bits
 
       - name: Build
-        run: python waf build
+        run: |
+          python3 waf build
 
-      - name: Upload DLLs
+      - name: Upload Binaries
         uses: actions/upload-artifact@v4
         with:
-          name: xash3d-64bit-dlls
-          # Збираємо всі скомпільовані ліби
+          name: xash3d-fwgs-win64
+          # Збираємо всі скомпільовані exe та dll
           path: |
+            build/*.exe
+            build/*.dll
             build/**/*.dll
-            build/**/*.exe
