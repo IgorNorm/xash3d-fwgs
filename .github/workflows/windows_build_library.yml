@@ -1,4 +1,4 @@
-name: Build Xash3D FWGS 64-bit
+name: Build Xash3D FWGS 64-bit (MSVC)
 
 on:
   push:
@@ -9,10 +9,6 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
-    
-    defaults:
-      run:
-        shell: msys2 {0}
 
     steps:
       - name: Checkout repository
@@ -21,33 +17,34 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-SDL2
-            mingw-w64-x86_64-pkg-config
-            git
+          python-version: '3.11'
+
+      - name: Download and Setup SDL2 for MSVC
+        shell: pwsh
+        run: |
+          # Завантажуємо офіційну версію SDL2 для розробки під Visual Studio
+          Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip" -OutFile "SDL2.zip"
+          Expand-Archive -Path "SDL2.zip" -DestinationPath "D:\SDL2"
 
       - name: Configure Waf
+        shell: pwsh
         run: |
-          # ПРИМУСОВО вказуємо використовувати GCC замість MSVC
-          export CC=gcc
-          export CXX=g++
-          python3 waf configure --build-type=release --64bits
+          # Вказуємо Waf шлях до розпакованого SDL2
+          $SDL2_PATH = "D:\SDL2\SDL2-2.28.5"
+          $env:SDL2DIR = $SDL2_PATH
+          
+          # Запускаємо конфіг. MSVC підтягнеться автоматично.
+          python waf configure --build-type=release --64bits --sdl2=$SDL2_PATH
 
-      # ЦЕЙ РЯДОК ВИВЕДЕ ЛОГ, ЯКЩО CONFIGURE ВПАДЕ
       - name: Show config.log on failure
         if: failure()
         run: cat build/config.log
 
       - name: Build
-        run: |
-          python3 waf build
+        run: python waf build
 
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
